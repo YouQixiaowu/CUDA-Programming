@@ -1,5 +1,7 @@
 #include "error.cuh"
 #include <stdio.h>
+#include <cooperative_groups.h>
+using namespace cooperative_groups;
 
 #ifdef USE_DP
     typedef double real;
@@ -11,8 +13,9 @@ const int NUM_REPEATS = 100;
 const int N = 100000000;
 const int M = sizeof(real) * N;
 const int BLOCK_SIZE = 128;
+const int GRID_SIZE = 10240;
 
-void timing(const real *d_x);
+void timing(const real *h_x);
 
 int main(void)
 {
@@ -25,7 +28,6 @@ int main(void)
     CHECK(cudaMalloc(&d_x, M));
     CHECK(cudaMemcpy(d_x, h_x, M, cudaMemcpyHostToDevice));
 
-    printf("\nusing atomicAdd:\n");
     timing(d_x);
 
     free(h_x);
@@ -33,16 +35,22 @@ int main(void)
     return 0;
 }
 
-void __global__ reduce(const real *d_x, real *d_y, const int N)
+void __global__ reduce_cp(const real *d_x, real *d_y, const int N)
 {
     const int tid = threadIdx.x;
     const int bid = blockIdx.x;
-    const int n = bid * blockDim.x + tid;
     extern __shared__ real s_y[];
-    s_y[tid] = (n < N) ? d_x[n] : 0.0;
+
+    real y = 0.0;
+    const int stride = blockDim.x * gridDim.x;
+    for (int n = bid * blockDim.x + tid; n < N; n += stride)
+    {
+        y += d_x[n];
+    }
+    s_y[tid] = y;
     __syncthreads();
 
-    for (int offset = blockDim.x >> 1; offset > 0; offset >>= 1)
+    for (int offset = blockDim.x >> 1; offset >= 32; offset >>= 1)
     {
         if (tid < offset)
         {
@@ -51,23 +59,31 @@ void __global__ reduce(const real *d_x, real *d_y, const int N)
         __syncthreads();
     }
 
+    y = s_y[tid];
+
+    thread_block_tile<32> g = tiled_partition<32>(this_thread_block());
+    for (int i = g.size() >> 1; i > 0; i >>= 1)
+    {
+        y += g.shfl_down(y, i);
+    }
+
     if (tid == 0)
     {
-        atomicAdd(d_y, s_y[0]);
+        d_y[bid] = y;
     }
 }
 
 real reduce(const real *d_x)
 {
-    const int grid_size = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    const int ymem = sizeof(real) * GRID_SIZE;
     const int smem = sizeof(real) * BLOCK_SIZE;
 
     real h_y[1] = {0};
     real *d_y;
-    CHECK(cudaMalloc(&d_y, sizeof(real)));
-    CHECK(cudaMemcpy(d_y, h_y, sizeof(real), cudaMemcpyHostToDevice));
+    CHECK(cudaMalloc(&d_y, ymem));
 
-    reduce<<<grid_size, BLOCK_SIZE, smem>>>(d_x, d_y, N);
+    reduce_cp<<<GRID_SIZE, BLOCK_SIZE, smem>>>(d_x, d_y, N);
+    reduce_cp<<<1, 1024, sizeof(real) * 1024>>>(d_y, d_y, GRID_SIZE);
 
     CHECK(cudaMemcpy(h_y, d_y, sizeof(real), cudaMemcpyDeviceToHost));
     CHECK(cudaFree(d_y));

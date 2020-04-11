@@ -1,24 +1,27 @@
 # 《`CUDA` 编程：基础与实践》源代码
 
-## 1. 告读者：
-* 代码还在开发中。由琪同学为本书写了 Python 版本的代码（用 pyCUDA）:
+  
+## 相关仓库
+* 由琪同学正在用 pyCUDA 实现本书中的范例，见如下仓库：
 https://github.com/YouQixiaowu/CUDA-Programming-with-Python
 
-## 2. 关于本书：
-  * 将于 2020 年在清华大学出版社出版，语言为中文。
-  * 覆盖开普勒到图灵（计算能力从 3.5 到 7.5）的所有 GPU 架构。
+
+## 关于本书：
+  * 将于 2020 年由清华大学出版社出版，语言为中文。 **前 8 章书稿已经公开，见本仓库的 PDF 文件。如果您想尽早阅读余下的章节，请在前 8 章书稿中找出 8 个错误（包括知识性错误、错别字、前后不一致等），然后私下联系我。邮箱：brucenju(at)gmail.com。**
+  * 覆盖开普勒到图灵（计算能力从 3.0 到 7.5）的所有 GPU 架构。
   * 尽量同时照顾 Windows 和 Linux 用户。
   * 假设读者有如下基础：
-    * 熟悉 `C++` (对全书来说)；
-    * 熟悉本科水平的物理和数学（对某些章节来说）。
+    * 熟悉 `C++` (对全书来说)
+    * 熟悉本科水平的物理（对第 13 章来说；本章可选读）
+    * 熟悉本科水平的数学（对第 14 章来说；本章可选读）
     
-## 3. 我的测试系统
+## 我的测试系统
 * Linux: 主机编译器用的 `g++`。
-* Windows: 仅使用命令行解释器 `CMD`，主机编译器用 Visual Studio 中的 `cl`。在用 `nvcc` 编译 CUDA 程序时，可能需要添加 `-Xcompiler "/wd 4819"` 选线消除和 unicode 有关的警告。
-* 全书代码可在 `CUDA` 9-10.2 （包含）之间的版本运行。
+* Windows: 仅使用命令行解释器 `CMD`，主机编译器用 Visual Studio 中的 `cl`。在用 `nvcc` 编译 CUDA 程序时，可能需要添加 `-Xcompiler "/wd 4819"` 选项消除和 unicode 有关的警告。
+* 全书代码可在 `CUDA` 9.0-10.2 （包含）之间的版本运行。
 
 
-## 4. 目录和源代码条目
+## 目录和源代码条目
 
 ### 第 1 章：GPU 硬件和 CUDA 工具
 
@@ -33,7 +36,7 @@ https://github.com/YouQixiaowu/CUDA-Programming-with-Python
 | `hello1.cu` | 一个正确的 `C++` 程序也是一个正确的 `CUDA` 程序 | 
 | `hello2.cu` | 写一个打印字符串的 `CUDA` 核函数并调用 | 
 | `hello3.cu` | 使用含有多个线程的线程块 |
-| `hello4.cu` | 使用多个网格 |
+| `hello4.cu` | 使用多个线程块 |
 | `hello5.cu` | 使用两维线程块 |
 
 
@@ -104,69 +107,36 @@ https://github.com/YouQixiaowu/CUDA-Programming-with-Python
 ### 第 10 章: 线程束内部函数
 | 文件        | 知识点 |
 |:------------|:---------------|
-| `reduce1syncwarp.cu` | 在线程束内部可以用 `__syncwarp()` 函数替换 `__syncthreads()` 函数 |
-| `reduce2shfl.cu`     | 适当地使用洗牌函数进行规约 |
-| `reduce3cp.cu`       | 协作组的使用 |
+| `reduce.cu` | 线程束同步函数、线程束洗牌函数以及协作组的使用 |
+| `reduce1parallelism.cu` | 提高线程利用率 |
+| `reduce2static.cu` | 利用静态全局内存加速  |
 
 
 ### 第 11 章： `CUDA` 流
 | 文件        | 知识点 |
 |:------------|:---------------|
-| `host_kernel.cu`     | 重叠主机与设备计算 |
-| `kernel_kernel.cu`   | 重叠核函数之间的计算 |
-| `kernel_transfer.cu` | 重叠核函数执行与数据传输 |
+| `host-kernel.cu`     | 重叠主机与设备计算 |
+| `kernel-kernel.cu`   | 重叠核函数之间的计算 |
+| `kernel-transfer.cu` | 重叠核函数执行与数据传输 |
 
 
 ### 第 12 章：统一内存
 | 文件       | 知识点 | 
 |:------------|:---------------|
-| `add_unified.cu` | 使用统一内存的简单程序 |
+| `add.cu` | 使用统一内存可以简化代码 |
+| `oversubscription1.cu` | 统一内存在初始化时才被分配  |
+| `oversubscription2.cu` | 用 GPU 先访问统一内存时可以超过显存的容量 |
+| `oversubscription3.cu` | 用 CPU 先访问统一内存时不可超过主机内存容量 |
+| `prefetch.cu` | 使用 cudaMemPrefetchAsync 函数 |
 
-
-### 第 13 章：总结与其它优化技巧
-There is no source code for this chapter.
-
-
-### 第 14 章：分子动力学模拟（MD）简介
-本章无源代码。
-
-
-### 第 15 章：C++ 版本的 MD 程序
-How to compile and run?
-  * type `make` to compile
-  * type `./ljmd 8 10000` to run
-  * type `plot_results` in Matlab command window to check the results
-
-
-### 第 16 章：仅加速求力的部分
-How to compile and run?
-  * type `make` to compile
-  * type `./ljmd 40 10000` to run
-  * type `plot_results` in Matlab command window to check the results
-
-
-### 第 17 章：加速全部程序
-How to compile and run?
-  * type `make` to compile
-  * type `./ljmd 40 10000` to run
-  * type `plot_results` in Matlab command window to check the results
-
-
-### 第 18 章：内存和其它优化
-How to compile and run?
-  * type `make` or `make -f makefile.ldg` or `make -f makefile.fast_math` to compile
-  * type `./ljmd 40 10000` to run
-  * type `plot_results` in Matlab command window to check the results
-
-
-### 第 19 章：用统一内存的 MD 程序
-How to compile and run?
-  * type `make` or `make -f makefile.pascal` to compile
-  * type `./ljmd 40 10000` to run
-  * type `plot_results` in Matlab command window to check the results
+### 第 13 章：分子动力学模拟（MD）
+| 文件夹        | 知识点 |
+|:------------|:---------------|
+| `cpp`     | C++ 版本的 MD 程序 |
+| `force-only`   | 仅将求力的函数移植到 CUDA |
+| `whole-code` | 全部移植到 CUDA |
   
-  
-### 第 20 章：CUDA 库
+### 第 14 章：CUDA 库
 | 文件        | 知识点 |
 |:------------|:---------------|
 | `thrust_scan_vector.cu`  | 使用 `thrust` 中的设备矢量 |
@@ -175,14 +145,13 @@ How to compile and run?
 | `cusolver.cu`            | 用 `cuSolver` 求矩阵本征值 |
 | `curand_host1.cu`        | 用 `cuRAND` 产生均匀分布的随机数 |
 | `curand_host2.cu`        | 用 `cuRAND` 产生高斯分布的随机数 |
-  
-  
-## 5. 我的部分测试结果
 
-### 4.1. 矢量相加 (第 5 章)
+## 我的部分测试结果
+
+### 矢量相加 (第 5 章)
 
 * 数组元素个数 = 1.0e8。
-* CPU (我的笔记本) 函数的执行时间是 60 ms （单精度）核 120 ms （双精度）。
+* CPU (我的笔记本) 函数的执行时间是 60 ms （单精度）和 120 ms （双精度）。
 * GPU 执行时间见下表：
 
 |  V100 (S) | V100 (D) | 2080ti (S) | 2080ti (D) | P100 (S) | P100 (D) | laptop-2070 (S) | laptop-2070 (D) | K40 (S) | K40 (D) |
@@ -191,7 +160,7 @@ How to compile and run?
 
 * 如果包含 cudaMemcpy 所花时间，GeForce RTX 2070-laptop 用时 180 ms （单精度）和 360 ms （双精度），是 CPU 版本的三倍慢！
 
-### 4.2. 一个高算术强度的函数（第 5 章）
+### 一个高算术强度的函数（第 5 章）
 * CPU 函数（数组长度为 10^4）用时 320 ms （单精度）和 450 ms （双精度）。
 * GPU 函数（数组长度为 10^6）用时情况如下表：
 
@@ -210,7 +179,7 @@ How to compile and run?
 | 10000000   | 250 ms | 
 | 100000000  | 2500 ms |
 
-### 4.3. 矩阵复制和转置 (第 7-8 章)
+### 矩阵复制和转置 (第 7-8 章)
 * 矩阵维度为 10000 乘 10000。
 * 核函数执行时间见下表：
 
@@ -224,39 +193,71 @@ How to compile and run?
 | 利用共享内存转置，且无 bank 冲突      | 1.4 ms | 2.5 ms | 2.3 ms | 4.2 ms |  |
 
 
-### 4.4. Reduction (chapters 8-10 and 14)
+### 数组规约（第 8-10 章）
 
-* Array length = 1.0e8 and each element has a value of 1.23.
-* The correct summation should be 123000000.
-* Using single precision with both CPU and GPU (Tesla K40).
+* 数组长度为 1.0e8，每个元素为 1.23。
+* 规约的精确结果为 123000000。
+* GPU 为笔记本版本的 GeForce RTX 2070。
+* 下面是用**单精度**浮点数测试的结果：
 
-| computation & machine                         | K40 (S)   | GeForce RTX 2070 (S)  |   result  |
-|:----------------------------------------------|:--------|:----------|:----------|
-| CPU with naive summation                      | 100 ms   | 100 ms | 33554432  | 
-| global memory only                            | 16.3 ms | 5.8 ms  | 123633392 | 
-| static shared memory                          | 10.8 ms | 5.8 ms | 123633392 | 
-| dynamic shared memory                         | 10.8 ms | 5.8 ms | 123633392 |  
-| atomicAdd                                     | 9.8 ms  | |123633392 | 
-| atomicAdd and syncwarp                        | 8.1 ms  | |123633392 | 
-| atomicAdd and shfl                            | 6.3 ms  | |123633392 | 
-| atomicAdd and CP                              | 6.3 ms  | |123633392 | 
-| two kernels and less blocks                   | 2.8 ms  | |122999920 | 
-| two kernels and less blocks and no cudaMalloc | 2.6 ms  | |122999920 |
+| 计算方法与机器                         | 计算时间 |   结果  |
+|:----------------------------------------------|:----------|:----------|
+| CPU 中循环累加                        | 100 ms | 33554432 （**完全错误**） | 
+| 全局内存+线程块同步函数                | 5.8 ms  | 123633392 （**三位**正确的有效数字）| 
+| 静态共享内存+线程块同步函数            | 5.8 ms | 123633392 （**三位**正确的有效数字）| 
+| 动态共享内存+线程块同步函数            | 5.8 ms | 123633392 （**三位**正确的有效数字）|  
+| 共享内存+原子函数+线程块同步函数        | 3.8 ms |123633392 （**三位**正确的有效数字）| 
+| 共享内存+原子函数+线程束同步函数        | 3.4 ms |123633392 （**三位**正确的有效数字）| 
+| 共享内存+原子函数+线程束洗牌函数        | 2.8 ms |123633392 （**三位**正确的有效数字）| 
+| 共享内存+原子函数+协作组               | 2.8 ms |123633392 （**三位**正确的有效数字）| 
+| 共享内存+协作组+两个核函数             | 2.0 ms |123000064 （**七位**正确的有效数字）| 
+| 共享内存+协作组+两个核函数+静态全局内存 | 1.5 ms |123000064 （**七位**正确的有效数字）|
 
 
-### 4.5. Neighbor list construction (chapter 9)
+### 邻居列表（第 9 章）
 
-* Number of atoms = 22464.
-* CPU function takes 230 ms for both single and double precisions.
-* GPU timing results are list in the following table:
+* 原子数为 22464。
+* 使用单精度或双精度时，CPU 都用时约 250 毫秒。
+* GPU 测试结果见下表：
 
-| computation     | V100 (S) | V100 (D) | K40 (S) | K40 (D) | 
+| 是否使用原子函数     | V100 (S) | V100 (D) | RTX 2070 (S) | RTX 2070 (D) | 
 |:----------------|:---------|:---------|:-----------|:-----------|
-| neighbor without atomicAdd | 1.9 ms | 2.6  ms | 10.1 ms | 10.9 ms |
-| neighbor with atomicAdd    | 1.8 ms | 2.6  ms | 10.5 ms | 14.5 ms |
+| 否 | 1.9 ms | 2.6  ms | 2.8 ms | 23 ms |
+| 是    | 1.8 ms | 2.6  ms | 2.5 ms | 16 ms |
 
 
 
+### 分子动力学模拟（第 13 章）
 
+* 模拟体系为固态氩
+* GPU 为笔记本中的 RTX 2070，使用单精度浮点数
+* CPU 为 Intel i7-8750H 处理器
+
+#### CPU 版本计算速度测试
+* 原子数 N = 10^3 * 4 = 4000
+* 产出步数 = 20000
+* 各个部分所花时间见下表
+
+| 求力部分     | 运动方程积分部分 | 全部 | 
+|:----------------|:---------|:-----------|
+| 62 s| 0.7 s | 62.7 s |
+
+#### force-only 版本的计算速度测试
+
+| 原子数  | 产出步数   | 求力和数据传输的时间 | 运动方程积分的时间  | 全部时间 | 整体速度|
+|:----------------|:---------|:-----------|:-----------|:-----------|:-----------|
+| 4000 | 20000 | 5.8 s | 0.7 s  |  6.5 s  | 1.2e7 原子步每秒|
+| 32000 | 10000 | 5.0 s | 2.5 s  |  7.5 s  | 4.3e7 原子步每秒|
+| 108000 | 4000 | 5.4 s | 3.3 s  |  8.7 s  | 5.0e7 原子步每秒|
+| 256000 | 2000 | 5.4 s | 4.6 s  |  10 s  | 5.1e7 原子步每秒|
+
+#### whole-code 版本的计算速度测试
+
+| 原子数  | 产出步数   | 求力的时间 | 运动方程积分的时间 | 全部时间 | 整体速度|
+|:----------------|:---------|:-----------|:----------|:-----------|:-----------|
+| 4000 | 20000 | 1.5 s | 0.6 s  |  2.1 s  | 3.8e7 原子步每秒|
+| 32000 | 10000 | 1.6 s | 0.3 s  |  1.9 s  | 1.7e8 原子步每秒|
+| 108000 | 4000 | 2.0 s | 0.4 s  |  2.4 s  | 1.8e8 原子步每秒|
+| 256000 | 2000 | 2.2 s | 0.4 s  |  2.6 s  | 2.0e8 原子步每秒|
 
 

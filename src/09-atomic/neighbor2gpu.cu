@@ -13,7 +13,7 @@
 #endif
 
 int N; // number of atoms
-const int NUM_REPEATS = 10; // number of timings
+const int NUM_REPEATS = 20; // number of timings
 const int MN = 10; // maximum number of neighbors for each atom
 
 const real cutoff = 1.9; // in units of Angstrom
@@ -39,18 +39,19 @@ int main(void)
     CHECK(cudaMalloc(&d_NL, mem2));
     CHECK(cudaMalloc(&d_x, mem3));
     CHECK(cudaMalloc(&d_y, mem3));
-    CHECK(cudaMemcpy(d_x, &v_x[0], mem3, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(d_y, &v_y[0], mem3, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_x, v_x.data(), mem3, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_y, v_y.data(), mem3, cudaMemcpyHostToDevice));
 
-    std::cout << std::endl << "not using atomicAdd:" << std::endl;
-    timing(d_NN, d_NL, d_x, d_y, false);
     std::cout << std::endl << "using atomicAdd:" << std::endl;
     timing(d_NN, d_NL, d_x, d_y, true);
+    std::cout << std::endl << "not using atomicAdd:" << std::endl;
+    timing(d_NN, d_NL, d_x, d_y, false);
+
 
     CHECK(cudaMemcpy(h_NN, d_NN, mem1, cudaMemcpyDeviceToHost));
     CHECK(cudaMemcpy(h_NL, d_NL, mem2, cudaMemcpyDeviceToHost));
 
-    print_neighbor(h_NN, h_NL, true);
+    print_neighbor(h_NN, h_NL, false);
 
     CHECK(cudaFree(d_NN));
     CHECK(cudaFree(d_NL));
@@ -92,7 +93,7 @@ void read_xy(std::vector<real>& v_x, std::vector<real>& v_y)
             }
             else
             {
-                std::cout << "Error for reading xy.in" << std::endl;
+                std::cout << "Error for reading xy.txt" << std::endl;
                 exit(1);
             }
         }
@@ -103,7 +104,7 @@ void read_xy(std::vector<real>& v_x, std::vector<real>& v_y)
 void __global__ find_neighbor_atomic
 (
     int *d_NN, int *d_NL, const real *d_x, const real *d_y,
-    const int N, const int MN, const real cutoff_square
+    const int N, const real cutoff_square
 )
 {
     const int n1 = blockIdx.x * blockDim.x + threadIdx.x;
@@ -158,15 +159,13 @@ void timing
     const bool atomic
 )
 {
-    float t_sum = 0;
-    float t2_sum = 0;
-
-    for (int repeat = 0; repeat <= NUM_REPEATS; ++repeat)
+    for (int repeat = 0; repeat < NUM_REPEATS; ++repeat)
     {
         cudaEvent_t start, stop;
         CHECK(cudaEventCreate(&start));
         CHECK(cudaEventCreate(&stop));
         CHECK(cudaEventRecord(start));
+        cudaEventQuery(start);
 
         int block_size = 128;
         int grid_size = (N + block_size - 1) / block_size;
@@ -174,46 +173,33 @@ void timing
         if (atomic)
         {
             find_neighbor_atomic<<<grid_size, block_size>>>
-            (d_NN, d_NL, d_x, d_y,
-            N, MN, cutoff_square
-            ); 
+            (d_NN, d_NL, d_x, d_y, N, cutoff_square);
         }
         else
         {
             find_neighbor_no_atomic<<<grid_size, block_size>>>
-            (d_NN, d_NL, d_x, d_y,
-            N,cutoff_square);
+            (d_NN, d_NL, d_x, d_y, N, cutoff_square);
         }
 
         CHECK(cudaEventRecord(stop));
         CHECK(cudaEventSynchronize(stop));
         float elapsed_time;
         CHECK(cudaEventElapsedTime(&elapsed_time, start, stop));
-        std::cout << "Time = " << elapsed_time << "ms." << std::endl;
-
-        if (repeat > 0)
-        {
-            t_sum += elapsed_time;
-            t2_sum += elapsed_time * elapsed_time;
-        }
+        std::cout << "Time = " << elapsed_time << " ms." << std::endl;
 
         CHECK(cudaEventDestroy(start));
         CHECK(cudaEventDestroy(stop));
     }
-
-    const float t_ave = t_sum / NUM_REPEATS;
-    const float t_err = std::sqrt(t2_sum / NUM_REPEATS - t_ave * t_ave);
-    std::cout << "Time = " << t_ave << " +- " << t_err << "ms." << std::endl;
 }
 
 void print_neighbor(const int *NN, const int *NL, const bool atomic)
 {
     std::ofstream outfile("neighbor.txt");
-    if(!outfile)
+    if (!outfile)
     {
         std::cout << "Cannot open neighbor.txt" << std::endl;
     }
-    for(int n = 0; n < N; ++n)
+    for (int n = 0; n < N; ++n)
     {
         if (NN[n] > MN)
         {
@@ -232,7 +218,6 @@ void print_neighbor(const int *NN, const int *NL, const bool atomic)
             {
                 outfile << " NaN";
             }
-
         }
         outfile << std::endl;
     }
